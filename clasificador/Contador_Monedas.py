@@ -3,23 +3,34 @@ import cv2
 from clasificador.Funciones import contador_monedas, monedas_y_dados, dibujar_moneda, \
     valor_moneda, imshow, agregar_total
 
-img = cv2.imread('./clasificador/imagenes/imagen_contornos.jpg', cv2.IMREAD_GRAYSCALE)
+# Cargar la imagen con contornos
+ruta_imagen_contornos = './clasificador/imagenes/imagen_contornos.jpg'
+imagen_contornos = cv2.imread(ruta_imagen_contornos, cv2.IMREAD_GRAYSCALE)
 
-monedas, _ = monedas_y_dados(img)
+# Obtener contornos de monedas y dados
+contornos_monedas, _ = monedas_y_dados(imagen_contornos)
 
-img_real = cv2.imread('./clasificador/imagenes/monedas.jpg')
+# Cargar la imagen original
+ruta_imagen_original = './clasificador/imagenes/monedas.jpg'
+imagen_original = cv2.imread(ruta_imagen_original)
 
-img_rgb = cv2.cvtColor(img_real, cv2.COLOR_BGR2RGB)
+# Convertir la imagen a formato RGB
+imagen_original_rgb = cv2.cvtColor(imagen_original, cv2.COLOR_BGR2RGB)
 
-for i in monedas:
-    img_rgb = dibujar_moneda(img_rgb, i, (0, 0, 0), valor_moneda(i))
+# Iterar sobre los contornos de las monedas
+for contorno_moneda in contornos_monedas:
+    # Dibujar cada moneda en la imagen original
+    imagen_original_rgb = dibujar_moneda(imagen_original_rgb, contorno_moneda, (0, 0, 0), valor_moneda(contorno_moneda))
 
-total_monedas = contador_monedas(monedas)
+# Calcular el total de las monedas
+total_monedas = contador_monedas(contornos_monedas)
 
+# Color del texto
 color_texto = (255, 255, 255)
 
 # Agregar texto a la izquierda de la imagen
-img_resultante = agregar_total(img_rgb, f'TOTAL: ${total_monedas}', total_monedas, color_texto)
+imagen_resultante = agregar_total(imagen_original_rgb, total_monedas, color_texto)
 
 # Guardar la imagen resultante
-cv2.imwrite('./clasificador/imagenes/monedas_resultado.jpg', cv2.cvtColor(img_resultante, cv2.COLOR_RGB2BGR))
+ruta_imagen_resultante = './clasificador/imagenes/monedas_resultado.jpg'
+cv2.imwrite(ruta_imagen_resultante, cv2.cvtColor(imagen_resultante, cv2.COLOR_RGB2BGR))

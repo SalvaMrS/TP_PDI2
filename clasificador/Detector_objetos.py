@@ -1,10 +1,10 @@
 import cv2
 from clasificador.Funciones import obtener_contornos, monedas_y_dados
 
-ruta_imagen = './clasificador/imagenes/monedas.jpg'
+ruta_imagen_entrada = './clasificador/imagenes/monedas.jpg'
+imagen_gris = cv2.imread(ruta_imagen_entrada, cv2.IMREAD_GRAYSCALE)
 
-img = cv2.imread(ruta_imagen, cv2.IMREAD_GRAYSCALE)
+imagen_contornos = obtener_contornos(imagen_gris)
 
-img_bin = obtener_contornos(img)
-
-cv2.imwrite('./clasificador/imagenes/imagen_contornos.jpg', img_bin)
+ruta_imagen_salida = './clasificador/imagenes/imagen_contornos.jpg'
+cv2.imwrite(ruta_imagen_salida, imagen_contornos)

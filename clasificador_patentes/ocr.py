@@ -16,6 +16,7 @@ class PatenteOCR:
         self.confianza_avg = confianza_avg
         self.none_low_thresh = none_low_thresh
 
+
     def predict(self, iter_coords, frame: np.ndarray) -> list:
         patentes = []
         for yolo_prediction in iter_coords:

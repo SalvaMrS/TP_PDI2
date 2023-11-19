@@ -3,8 +3,6 @@ import cv2
 
 from clasificador_patentes.clasificador import DetectorPatente
 from clasificador_patentes.ocr import PatenteOCR
-"""ocr_detector = PatenteOCR()
-
 
 carpeta_imagenes = 'Patentes/Patentes/'
 archivos_en_carpeta = os.listdir(carpeta_imagenes)
@@ -19,19 +17,28 @@ for imagen in archivos_imagen:
     if image is None:
         print(f"Error: Unable to read image {imagen_path}")
         continue
+    print(plate_detector.show_predicts(image))
 
+    """
     processed_image = plate_detector.preprocess(image)
     detections = plate_detector.predict(processed_image)
     bounding_boxes = plate_detector.procesar_salida_yolo(detections)
 
     if bounding_boxes:
-        result_image = plate_detector.draw_bboxes(image, bounding_boxes)
-        cv2.imshow(f'Detected Plates - {imagen}', result_image)
+        print('acaa')
+        for x1, y1, x2, y2, score in plate_detector.yield_coords(image, bounding_boxes):
+            print(f"Coordinates: ({x1}, {y1}, {x2}, {y2}), Score: {score:.2f}")
+
+        # Descomenta las siguientes líneas si deseas mostrar las imágenes con las cajas delimitadoras
+        # result_image = plate_detector.draw_bboxes(image, bounding_boxes)
+        # cv2.imshow(f'Detected Plates - {imagen}', result_image)
     else:
         print(f"No license plate detected in the image: {imagen}")
 
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    #cv2.waitKey(0)
+    #cv2.destroyAllWindows()
+    
+    """
 """
 carpeta_imagenes = 'Patentes/Patentes/'
 archivos_en_carpeta = os.listdir(carpeta_imagenes)
@@ -58,3 +65,4 @@ for imagen in archivos_imagen:
         cv2.destroyAllWindows()
         print(f"Patente {i}: {patente}")
 
+"""

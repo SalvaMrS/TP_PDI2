@@ -17,7 +17,7 @@ for imagen in archivos_imagen:
     if image is None:
         print(f"Error: Unable to read image {imagen_path}")
         continue
-    imagen_filtros = plate_detector.preprocess(image)
+    imagen_filtros = plate_detector.detect_and_segment(imagen_path)
     """
     cv2.imshow('pop', imagen_filtros)
     cv2.waitKey(0)

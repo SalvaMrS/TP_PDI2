@@ -18,7 +18,7 @@ class DetectorPatente:
         self.saved_model_loaded = tf.saved_model.load(self.MODEL_PATH, tags=[tag_constants.SERVING])
         self.yolo_infer = self.saved_model_loaded.signatures['serving_default']
 
-    def preprocess(self, frame: np.ndarray) -> tf.Tensor:
+    """def preprocess(self, frame: np.ndarray) -> tf.Tensor:
         # Convertir la imagen a escala de grises
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -49,17 +49,32 @@ class DetectorPatente:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-        # Normalizar la imagen restando la media y dividiendo por la desviación estándar
-        mean = np.mean(resized_frame)
-        std = np.std(resized_frame)
-        normalized_frame = (resized_frame - mean) / std
-
-        # Añadir una dimensión para representar el batch (1 imagen)
-        normalized_frame = np.expand_dims(normalized_frame, axis=0)
-
         # Convertir a tf.Tensor y asegurarse de que sea float32
-        return normalized_frame.astype(np.float32)
+        return tf.constant(resized_frame, dtype=tf.float32)"""
 
+    def preprocess(self,image):
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        morph = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+        return morph
+
+    def detect_and_segment(self,image_path):
+        image = cv2.imread(image_path)
+        processed_image = self.preprocess(image)
+
+        contours, _ = cv2.findContours(processed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 1000:  # Filtro de área para eliminar contornos pequeños
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                roi = image[y:y + h, x:x + w]
+                cv2.imshow('Segmento de Patente', roi)
+
+        cv2.imshow('Contornos Detectados', image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     def correct_perspective(self, frame: np.ndarray) -> np.ndarray:
         # Implementa tu lógica de corrección de perspectiva aquí
         # Puedes usar cv2.warpPerspective para esto

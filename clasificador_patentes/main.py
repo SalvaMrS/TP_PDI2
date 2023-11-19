@@ -13,11 +13,17 @@ for imagen in archivos_imagen:
     plate_detector = DetectorPatente()
     imagen_path = os.path.join(carpeta_imagenes, imagen)
     image = cv2.imread(imagen_path)
-
+    print(imagen)
     if image is None:
         print(f"Error: Unable to read image {imagen_path}")
         continue
-    print(plate_detector.show_predicts(image))
+    imagen_filtros = plate_detector.preprocess(image)
+    """
+    cv2.imshow('pop', imagen_filtros)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    """
+    # print(plate_detector.show_predicts(image))
 
     """
     processed_image = plate_detector.preprocess(image)

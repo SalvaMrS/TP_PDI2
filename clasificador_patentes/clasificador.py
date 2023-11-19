@@ -4,46 +4,61 @@ import numpy as np
 import cv2
 import tensorflow as tf
 
+
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 class DetectorPatente:
     MODEL_PATH = 'clasificador_patentes/model/tf-yolo_tiny_v4-512x512-custom-anchors'
     INPUT_SIZE = 512
     IOU_THRESHOLD = 0.45
-    SCORE_THRESHOLD = 0.1
+    SCORE_THRESHOLD = 0.25
 
     def __init__(self):
         self.saved_model_loaded = tf.saved_model.load(self.MODEL_PATH, tags=[tag_constants.SERVING])
         self.yolo_infer = self.saved_model_loaded.signatures['serving_default']
 
     def preprocess(self, frame: np.ndarray) -> tf.Tensor:
-        corrected_frame = self.correct_perspective(frame)
+        # Convertir la imagen a escala de grises
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # Asegúrate de que la imagen tenga el rango correcto (0-1)
-        image_data = corrected_frame.astype(np.float32) / 255.0
-        # Resize de la imagen a las dimensiones de entrada del modelo
-        image_data = cv2.resize(image_data, (512, 512))
-        # Aumento de datos aleatorio: ajuste de brillo y contraste
-        alpha = 0.5 + np.random.uniform(-0.2, 0.2)
-        beta = 0.5 + np.random.uniform(-0.2, 0.2)
-        image_data = cv2.convertScaleAbs(image_data, alpha=alpha, beta=beta)
+        # Aplicar umbralado
+        _, thresholded = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY)
 
-        # Aumento de datos aleatorio: rotación
-        angle = np.random.uniform(-10, 10)
-        rows, cols, _ = image_data.shape
-        rotation_matrix = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
-        image_data = cv2.warpAffine(image_data, rotation_matrix, (cols, rows))
+        # Aplicar operaciones morfológicas para mejorar la detección de contornos
+        kernel = np.ones((5, 5), np.uint8)
+        morphological = cv2.morphologyEx(thresholded, cv2.MORPH_CLOSE, kernel)
 
+        # Dilatación adicional para resaltar los contornos
+        morphological = cv2.dilate(morphological, kernel, iterations=1)
 
+        # Encuentra los contornos en la imagen
+        contours, _ = cv2.findContours(morphological, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # Normaliza la imagen canal por canal restando la media y dividiendo por la desviación estándar
-        mean = np.array([0.485, 0.456, 0.406])  # Media de ImageNet
-        std = np.array([0.229, 0.224, 0.225])  # Desviación estándar de ImageNet
-        image_data = (image_data - mean) / std
+        # Si se encontraron contornos, dibuja un rectángulo alrededor del área del contorno más grande (asumiendo que es la patente)
+        if contours:
+            max_contour = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(max_contour)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-        # Añade una dimensión para representar el batch (1 imagen)
-        image_data = np.expand_dims(image_data, axis=0)
+        # Redimensionar la imagen a las dimensiones de entrada del modelo
+        resized_frame = cv2.resize(frame, (512, 512))
 
-        # Convierte a tf.Tensor y asegúrate de que sea float32
-        return tf.constant(image_data, dtype=tf.float32)
+        # Mostrar la imagen con el rectángulo dibujado
+        cv2.imshow('Imagen con rectángulo de patente', resized_frame)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+        # Normalizar la imagen restando la media y dividiendo por la desviación estándar
+        mean = np.mean(resized_frame)
+        std = np.std(resized_frame)
+        normalized_frame = (resized_frame - mean) / std
+
+        # Añadir una dimensión para representar el batch (1 imagen)
+        normalized_frame = np.expand_dims(normalized_frame, axis=0)
+
+        # Convertir a tf.Tensor y asegurarse de que sea float32
+        return normalized_frame.astype(np.float32)
 
     def correct_perspective(self, frame: np.ndarray) -> np.ndarray:
         # Implementa tu lógica de corrección de perspectiva aquí
@@ -64,6 +79,7 @@ class DetectorPatente:
         return thresh
 
     def predict(self, input_img: tf.Tensor) -> dict:
+        print(input_img)
         return self.yolo_infer(input_img)
 
     def procesar_salida_yolo(self, output: dict) -> list:
@@ -91,11 +107,11 @@ class DetectorPatente:
                             font_scale, (20, 10, 220), 5)
         return frame
 
-
     def show_predicts(self, frame: np.ndarray):
-        # cv2.imwrite('test.jpg', frame)
         input_img = self.preprocess(frame)
+        print("Input shape:", input_img.shape)
         yolo_out = self.predict(input_img)
+        """
         bboxes = self.procesar_salida_yolo(yolo_out)
         # Convertir el frame completo a escala de grises una vez
 
@@ -112,6 +128,7 @@ class DetectorPatente:
                 plate = ''.join(plate).replace('_', '')
                 print(plate)
                 return plate
+        """
 
     @staticmethod
     def yield_coords(frame: np.ndarray, bboxes: list):

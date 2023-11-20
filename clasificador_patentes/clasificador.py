@@ -11,7 +11,7 @@ if len(physical_devices) > 0:
 
 class DetectorPatente:
     MODEL_PATH = 'clasificador_patentes/model/tf-yolo_tiny_v4-512x512-custom-anchors'
-    INPUT_SIZE = 512
+    INPUT_SIZE = 620
     IOU_THRESHOLD = 0.45
     SCORE_THRESHOLD = 0.25
 
@@ -22,6 +22,7 @@ class DetectorPatente:
     def preprocess(self, frame: np.ndarray) -> np.ndarray:
         # Convertir la imagen a escala de grises
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.bilateralFilter(gray, 11, 17, 17)  # Blur to reduce noise
 
         # Aplicar umbralado
         _, thresholded = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY)
@@ -56,6 +57,8 @@ class DetectorPatente:
     def apply_additional_filters(self, image):
         # Aplicar más filtros y operaciones morfológicas según sea necesario
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.bilateralFilter(gray, 11, 17, 17)  # Blur to reduce noise
+
         _, thresholded = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY)
 
         # Aplicar operaciones morfológicas adicionales
@@ -67,7 +70,7 @@ class DetectorPatente:
 
     def perspective_transform(self, image, box):
         rect = np.array(box, dtype="float32")
-        width, height = 512, 512  # Ajusta las dimensiones según sea necesario
+        width, height = 620, 480  # Ajusta las dimensiones según sea necesario
         dst = np.array([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]], dtype="float32")
         M = cv2.getPerspectiveTransform(rect, dst)
         warped = cv2.warpPerspective(image, M, (width, height))
@@ -83,6 +86,7 @@ class DetectorPatente:
         except Exception as e:
             gray_image = processed_image
         # Aplicar descenso de gradiente para resaltar bordes
+        edged = cv2.Canny(gray_image, 30, 200)
         gradient_image = cv2.Sobel(gray_image, cv2.CV_64F, 1, 0, ksize=3)
         gradient_image = np.uint8(np.absolute(gradient_image))
 
@@ -128,6 +132,8 @@ class DetectorPatente:
 
     def adaptive_threshold(self, image: np.ndarray) -> np.ndarray:
         image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image_gray = cv2.bilateralFilter(image_gray, 11, 17, 17)  # Blur to reduce noise
+
         _, thresh = cv2.threshold(image_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         return thresh
 

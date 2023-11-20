@@ -1,7 +1,7 @@
 import os
 import cv2
-from clasificador import Detector
-from ocr import PatenteOCR
+from clasificador_patentes.clasificador import Detector
+from clasificador_patentes.ocr import PatenteOCR
 
 #Porcesamiento de Patentes
 detector = Detector()

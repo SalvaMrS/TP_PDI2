@@ -33,18 +33,6 @@ class DetectorPatente:
         # Dilatación adicional para resaltar los contornos
         morphological = cv2.dilate(morphological, kernel, iterations=1)
 
-        # Encuentra los contornos en la imagen original para dibujarlos
-        contours, _ = cv2.findContours(morphological, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # Dibujar contornos en la imagen original
-        
-        #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
-
-        # Mostrar la imagen con contornos dibujados
-        #cv2.imshow('Imagen con Contornos', frame)
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
-
         return morphological
 
     def postprocess_contours(self, image, contours):
@@ -75,8 +63,6 @@ class DetectorPatente:
         morphological = cv2.morphologyEx(thresholded, cv2.MORPH_CLOSE, kernel)
         morphological = cv2.dilate(morphological, kernel, iterations=1)
 
-        # Puedes experimentar con más filtros y operaciones aquí
-
         return morphological
 
     def perspective_transform(self, image, box):
@@ -90,17 +76,32 @@ class DetectorPatente:
     def detect_and_segment(self, image_path):
         image = cv2.imread(image_path)
         processed_image = self.preprocess(image.copy())
-        # Convertir la imagen procesada a escala de grises
-        gray_image = cv2.cvtColor(processed_image, cv2.COLOR_BGR2GRAY)
 
+        # Convertir la imagen procesada a escala de grises
+        try:
+            gray_image = cv2.cvtColor(processed_image, cv2.COLOR_BGR2GRAY)
+        except Exception as e:
+            gray_image = processed_image
         # Aplicar descenso de gradiente para resaltar bordes
         gradient_image = cv2.Sobel(gray_image, cv2.CV_64F, 1, 0, ksize=3)
         gradient_image = np.uint8(np.absolute(gradient_image))
-        
-        # Combinar imagen original con bordes resaltados
-        processed_image = cv2.addWeighted(processed_image, 0.7, cv2.cvtColor(gradient_image, cv2.COLOR_GRAY2BGR), 0.3, 0)
 
-         # Convertir la imagen procesada a escala de grises nuevamente
+        # Asegurarse de que ambas imágenes tengan las mismas dimensiones
+        gradient_image_bgr = cv2.cvtColor(gradient_image, cv2.COLOR_GRAY2BGR)
+
+        # Asegurarse de que ambas imágenes tengan las mismas dimensiones
+        if processed_image.shape[:2] != gradient_image_bgr.shape[:2]:
+            gradient_image_bgr = cv2.resize(gradient_image_bgr, (processed_image.shape[1], processed_image.shape[0]))
+
+        # Asegurarse de que ambas imágenes tengan el mismo número de canales
+        if len(processed_image.shape) == 2:
+            processed_image = cv2.cvtColor(processed_image, cv2.COLOR_GRAY2BGR)
+
+        if processed_image.shape[2] != gradient_image_bgr.shape[2]:
+            gradient_image_bgr = cv2.resize(gradient_image_bgr, (processed_image.shape[1], processed_image.shape[0]))
+
+        processed_image = cv2.addWeighted(processed_image, 0.7, gradient_image_bgr, 0.3, 0)
+        # Convertir la imagen procesada a escala de grises nuevamente
         gray_processed_image = cv2.cvtColor(processed_image, cv2.COLOR_BGR2GRAY)
 
         # Aplicar umbral para obtener una imagen binaria

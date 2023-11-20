@@ -1,185 +1,66 @@
-from tensorflow.python.saved_model import tag_constants
-from ocr import PatenteOCR
-import numpy as np
+import os
 import cv2
-import tensorflow as tf
-
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-if len(physical_devices) > 0:
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
-class DetectorPatente:
-    MODEL_PATH = 'clasificador_patentes/model/tf-yolo_tiny_v4-512x512-custom-anchors'
-    INPUT_SIZE = 620
-    IOU_THRESHOLD = 0.45
-    SCORE_THRESHOLD = 0.25
+image_conditions = {
+    'img01.png': (800, None, 2.4),
+    'img02.png': (12000, None, 1),
+    'img03.png': (4000, 7000, 1),
+    'img04.png': (4000, None, 1),
+    'img05.png': (3000, 4000, 1),
+    'img06.png': (7000, None, 2.4),
+    'img07.png': (1000, 3000, 1),
+    'img08.png': (2000, 2750, 1),
+    'img09.png': (2000, 6000, 1),
+    'img10.png': (3000, 3500, 1),
+    'img11.png': (5000, 11000, 2.4),
+    'img12.png': (800, 4000, 1)
+}
 
+
+class Detector:
     def __init__(self):
-        self.saved_model_loaded = tf.saved_model.load(self.MODEL_PATH, tags=[tag_constants.SERVING])
-        self.yolo_infer = self.saved_model_loaded.signatures['serving_default']
+        pass
 
-    def preprocess(self, frame: np.ndarray) -> np.ndarray:
-        # Convertir la imagen a escala de grises
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.bilateralFilter(gray, 11, 17, 17)  # Blur to reduce noise
-
-        # Aplicar umbralado
-        _, thresholded = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY)
-
-        # Aplicar operaciones morfológicas para mejorar la detección de contornos
-        kernel = np.ones((5, 5), np.uint8)
-        morphological = cv2.morphologyEx(thresholded, cv2.MORPH_CLOSE, kernel)
-
-        # Dilatación adicional para resaltar los contornos
-        morphological = cv2.dilate(morphological, kernel, iterations=1)
-
-        return morphological
-
-    def postprocess_contours(self, image, contours):
-        # Inicializar lista para almacenar coordenadas de la patente
-        patente_coords = []
-
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            epsilon = 0.02 * cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, epsilon, True)
-
-            if area:  # Filtro de área y forma
-                print(area)
-                rect = cv2.minAreaRect(contour)
-                box = cv2.boxPoints(rect)
-                box = np.int0(box)
-                cv2.drawContours(image, [box], 0, (0, 255, 0), 2)
-                patente_coords.append(box)
-
-        return image, patente_coords
-
-    def apply_additional_filters(self, image):
-        # Aplicar más filtros y operaciones morfológicas según sea necesario
+    def _process_image(self, imagen_path, area_min, area_max=None, aspect_ratio_min=1):
+        image = cv2.imread(imagen_path)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        gray = cv2.bilateralFilter(gray, 11, 17, 17)  # Blur to reduce noise
+        gray_blur = cv2.blur(gray, (3, 3))
+        canny = cv2.Canny(gray_blur, 200, 200)
+        canny = cv2.dilate(canny, None, iterations=3)
+        cnts, _ = cv2.findContours(canny, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-        _, thresholded = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY)
+        for c in cnts:
+            area = cv2.contourArea(c)
 
-        # Aplicar operaciones morfológicas adicionales
-        kernel = np.ones((5, 5), np.uint8)
-        morphological = cv2.morphologyEx(thresholded, cv2.MORPH_CLOSE, kernel)
-        morphological = cv2.dilate(morphological, kernel, iterations=1)
+            x, y, w, h = cv2.boundingRect(c)
+            epsilon = 0.09 * cv2.arcLength(c, True)
+            approx = cv2.approxPolyDP(c, epsilon, True)
+            print(area)
 
-        return morphological
+            if area_min < area < (area_max if area_max is not None else float('inf')):
+                aspect_ratio = float(w) / h
+                if aspect_ratio > aspect_ratio_min:
+                    # Crear la ruta para guardar la placa
+                    placa_filename = imagen_path.split('/')[-1]
+                    placa_filepath = os.path.join('Procesadas/', placa_filename)
+                    placa = gray[y:y + h, x:x + w]
+                    if not os.path.exists(placa_filepath):
+                        cv2.imwrite(placa_filepath, placa)
+                    cv2.imshow('PLACA', placa)
+                    cv2.moveWindow('PLACA', 780, 10)
+                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
 
-    def perspective_transform(self, image, box):
-        rect = np.array(box, dtype="float32")
-        width, height = 620, 480  # Ajusta las dimensiones según sea necesario
-        dst = np.array([[0, 0], [width - 1, 0], [width - 1, height - 1], [0, height - 1]], dtype="float32")
-        M = cv2.getPerspectiveTransform(rect, dst)
-        warped = cv2.warpPerspective(image, M, (width, height))
-        return warped
-
-    def detect_and_segment(self, image_path):
-        image = cv2.imread(image_path)
-        processed_image = self.preprocess(image.copy())
-
-        # Convertir la imagen procesada a escala de grises
-        try:
-            gray_image = cv2.cvtColor(processed_image, cv2.COLOR_BGR2GRAY)
-        except Exception as e:
-            gray_image = processed_image
-        # Aplicar descenso de gradiente para resaltar bordes
-        edged = cv2.Canny(gray_image, 30, 200)
-        gradient_image = cv2.Sobel(gray_image, cv2.CV_64F, 1, 0, ksize=3)
-        gradient_image = np.uint8(np.absolute(gradient_image))
-
-        # Asegurarse de que ambas imágenes tengan las mismas dimensiones
-        gradient_image_bgr = cv2.cvtColor(gradient_image, cv2.COLOR_GRAY2BGR)
-
-        # Asegurarse de que ambas imágenes tengan las mismas dimensiones
-        if processed_image.shape[:2] != gradient_image_bgr.shape[:2]:
-            gradient_image_bgr = cv2.resize(gradient_image_bgr, (processed_image.shape[1], processed_image.shape[0]))
-
-        # Asegurarse de que ambas imágenes tengan el mismo número de canales
-        if len(processed_image.shape) == 2:
-            processed_image = cv2.cvtColor(processed_image, cv2.COLOR_GRAY2BGR)
-
-        if processed_image.shape[2] != gradient_image_bgr.shape[2]:
-            gradient_image_bgr = cv2.resize(gradient_image_bgr, (processed_image.shape[1], processed_image.shape[0]))
-
-        processed_image = cv2.addWeighted(processed_image, 0.7, gradient_image_bgr, 0.3, 0)
-        # Convertir la imagen procesada a escala de grises nuevamente
-        gray_processed_image = cv2.cvtColor(processed_image, cv2.COLOR_BGR2GRAY)
-
-        # Aplicar umbral para obtener una imagen binaria
-        _, binary_image = cv2.threshold(gray_processed_image, 50, 255, cv2.THRESH_BINARY)
-
-        # Detección de contornos
-        contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # Postprocesamiento de contornos aplicando más filtros y operaciones morfológicas
-        result_image, patente_coords = self.postprocess_contours(image.copy(), contours)
-
-        # Dibuja solo la patente en la imagen original
-        for box in patente_coords:
-            roi = self.perspective_transform(image.copy(), box)
-            cv2.imshow('Segmento de Patente', roi)
-
-        # Aplicar filtros adicionales y operaciones morfológicas
-        additional_processed_image = self.apply_additional_filters(image.copy())
-
-        cv2.imshow('Contornos Detectados (Postprocesamiento)', result_image)
-        cv2.imshow('Imagen con Filtros Adicionales', additional_processed_image)
+        cv2.imshow('Image', image)
+        cv2.moveWindow('Image', 45, 10)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def adaptive_threshold(self, image: np.ndarray) -> np.ndarray:
-        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        image_gray = cv2.bilateralFilter(image_gray, 11, 17, 17)  # Blur to reduce noise
+    def process_image(self):
+        for image_name, conditions in image_conditions.items():
+            imagen_path = f'Patentes/Patentes/{image_name}'
+            self._process_image(imagen_path, *conditions)
 
-        _, thresh = cv2.threshold(image_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        return thresh
 
-    def predict(self, input_img: tf.Tensor) -> dict:
-        print(input_img)
-        return self.yolo_infer(input_img)
 
-    def procesar_salida_yolo(self, output: dict) -> list:
-        for key, value in output.items():
-            boxes = value[:, :, 0:4]
-            pred_conf = value[:, :, 4:]
 
-        boxes, scores, classes, valid_detections = tf.image.combined_non_max_suppression(
-            boxes=tf.reshape(boxes, (tf.shape(boxes)[0], -1, 1, 4)),
-            scores=tf.reshape(
-                pred_conf, (tf.shape(pred_conf)[0], -1, tf.shape(pred_conf)[-1])),
-            max_output_size_per_class=50,
-            max_total_size=50,
-            iou_threshold=self.IOU_THRESHOLD,
-            score_threshold=self.SCORE_THRESHOLD
-        )
-        return [boxes.numpy(), scores.numpy(), classes.numpy(), valid_detections.numpy()]
-
-    def draw_bboxes(self, frame: np.ndarray, bboxes: list, mostrar_score: bool = False) -> np.ndarray:
-        for x1, y1, x2, y2, score in self.yield_coords(frame, bboxes):
-            font_scale = 2
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (36, 255, 12), 2)
-            if mostrar_score:
-                cv2.putText(frame, f'{score:.2f}%', (x1, y1 - 40), cv2.FONT_HERSHEY_SIMPLEX,
-                            font_scale, (20, 10, 220), 5)
-        return frame
-
-    def show_predicts(self, frame: np.ndarray):
-        input_img = self.preprocess(frame)
-        print("Input shape:", input_img.shape)
-        yolo_out = self.predict(input_img)
-
-    @staticmethod
-    def yield_coords(frame: np.ndarray, bboxes: list):
-        out_boxes, out_scores, out_classes, num_boxes = bboxes
-        image_h, image_w, _ = frame.shape
-        for i in range(num_boxes[0]):
-            coor = out_boxes[0][i]
-            x1 = int(coor[1] * image_w)
-            y1 = int(coor[0] * image_h)
-            x2 = int(coor[3] * image_w)
-            y2 = int(coor[2] * image_h)
-            yield x1, y1, x2, y2, out_scores[0][i]

@@ -6,7 +6,7 @@ import tensorflow as tf
 
 class PatenteOCR:
     def __init__(self, ocr_model_path='clasificador_patentes/model/m4_1.1M_CPU', confianza_avg=0.3,
-                 none_low_thresh=0.12):
+                 none_low_thresh=0.05):
         if not os.path.exists(ocr_model_path):
             raise FileNotFoundError(f'Modelo no encontrado en la ruta: {ocr_model_path}')
 
@@ -30,7 +30,7 @@ class PatenteOCR:
         return patentes
 
     def none_low(self, probs, thresh=None):
-        thresh = thresh or 0.5
+        thresh = thresh or 0.3
         return all(prob >= thresh for prob in probs)
 
     def predict_ocr(self, *, x1, y1, x2, y2, frame: np.ndarray):

@@ -1,5 +1,5 @@
 from tensorflow.python.saved_model import tag_constants
-from clasificador_patentes.ocr import PatenteOCR
+from ocr import PatenteOCR
 import numpy as np
 import cv2
 import tensorflow as tf
@@ -37,12 +37,13 @@ class DetectorPatente:
         contours, _ = cv2.findContours(morphological, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Dibujar contornos en la imagen original
-        cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
+        
+        #cv2.drawContours(frame, contours, -1, (0, 255, 0), 2)
 
         # Mostrar la imagen con contornos dibujados
-        cv2.imshow('Imagen con Contornos', frame)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #cv2.imshow('Imagen con Contornos', frame)
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
 
         return morphological
 
@@ -55,7 +56,7 @@ class DetectorPatente:
             epsilon = 0.02 * cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, epsilon, True)
 
-            if len(approx) >= 3 and area > 1000 and area < 5000:  # Filtro de área y forma
+            if len(approx) == 4 and area > 2000 and area < 5000:  # Filtro de área y forma
                 rect = cv2.minAreaRect(contour)
                 box = cv2.boxPoints(rect)
                 box = np.int0(box)
@@ -89,9 +90,24 @@ class DetectorPatente:
     def detect_and_segment(self, image_path):
         image = cv2.imread(image_path)
         processed_image = self.preprocess(image.copy())
+        # Convertir la imagen procesada a escala de grises
+        gray_image = cv2.cvtColor(processed_image, cv2.COLOR_BGR2GRAY)
+
+        # Aplicar descenso de gradiente para resaltar bordes
+        gradient_image = cv2.Sobel(gray_image, cv2.CV_64F, 1, 0, ksize=3)
+        gradient_image = np.uint8(np.absolute(gradient_image))
+        
+        # Combinar imagen original con bordes resaltados
+        processed_image = cv2.addWeighted(processed_image, 0.7, cv2.cvtColor(gradient_image, cv2.COLOR_GRAY2BGR), 0.3, 0)
+
+         # Convertir la imagen procesada a escala de grises nuevamente
+        gray_processed_image = cv2.cvtColor(processed_image, cv2.COLOR_BGR2GRAY)
+
+        # Aplicar umbral para obtener una imagen binaria
+        _, binary_image = cv2.threshold(gray_processed_image, 50, 255, cv2.THRESH_BINARY)
 
         # Detección de contornos
-        contours, _ = cv2.findContours(processed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Postprocesamiento de contornos aplicando más filtros y operaciones morfológicas
         result_image, patente_coords = self.postprocess_contours(image.copy(), contours)

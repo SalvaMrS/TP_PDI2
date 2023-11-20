@@ -1,8 +1,8 @@
 import os
 import cv2
 
-from clasificador_patentes.clasificador import DetectorPatente
-from clasificador_patentes.ocr import PatenteOCR
+from clasificador import DetectorPatente
+from ocr import PatenteOCR
 
 carpeta_imagenes = 'Patentes/Patentes/'
 archivos_en_carpeta = os.listdir(carpeta_imagenes)

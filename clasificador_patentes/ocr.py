@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 class PatenteOCR:
-    def __init__(self, ocr_model_path='clasificador_patentes/model/m4_1.1M_CPU', confianza_avg=0.5,
+    def __init__(self, ocr_model_path='clasificador_patentes/model/m4_1.1M_CPU', confianza_avg=0.3,
                  none_low_thresh=0.12):
         if not os.path.exists(ocr_model_path):
             raise FileNotFoundError(f'Modelo no encontrado en la ruta: {ocr_model_path}')

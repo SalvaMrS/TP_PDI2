@@ -1,74 +1,51 @@
-import os
 import cv2
 
-from clasificador import DetectorPatente
-from ocr import PatenteOCR
-
-carpeta_imagenes = 'Patentes/Patentes/'
-archivos_en_carpeta = os.listdir(carpeta_imagenes)
-extensiones_validas = ['.png', '.jpg', '.jpeg']
-archivos_imagen = [archivo for archivo in archivos_en_carpeta if any(archivo.lower().endswith(ext) for ext in extensiones_validas)]
-
-for imagen in archivos_imagen:
-    plate_detector = DetectorPatente()
-    imagen_path = os.path.join(carpeta_imagenes, imagen)
+def process_image(imagen_path, area_min, area_max=None, aspect_ratio_min=1):
     image = cv2.imread(imagen_path)
-    print(imagen)
-    if image is None:
-        print(f"Error: Unable to read image {imagen_path}")
-        continue
-    imagen_filtros = plate_detector.detect_and_segment(imagen_path)
-    """
-    cv2.imshow('pop', imagen_filtros)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray_blur = cv2.blur(gray, (3, 3))
+    canny = cv2.Canny(gray_blur, 200, 200)
+    canny = cv2.dilate(canny, None, iterations=3)
+    cnts, _ = cv2.findContours(canny, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    for c in cnts:
+        area = cv2.contourArea(c)
+
+        x, y, w, h = cv2.boundingRect(c)
+        epsilon = 0.09 * cv2.arcLength(c, True)
+        approx = cv2.approxPolyDP(c, epsilon, True)
+
+        if area_min < area < (area_max if area_max is not None else float('inf')):
+            aspect_ratio = float(w) / h
+            if aspect_ratio > aspect_ratio_min:
+                placa = gray[y:y + h, x:x + w]
+                cv2.imshow('PLACA', placa)
+                cv2.moveWindow('PLACA', 780, 10)
+                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
+
+    cv2.imshow('Image', image)
+    cv2.moveWindow('Image', 45, 10)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    """
-    # print(plate_detector.show_predicts(image))
 
-    """
-    processed_image = plate_detector.preprocess(image)
-    detections = plate_detector.predict(processed_image)
-    bounding_boxes = plate_detector.procesar_salida_yolo(detections)
+# Definir las condiciones para cada imagen
+image_conditions = {
+    'img01.png': (800, None, 2.4),
+    'img02.png': (12000, None, 1),
+    'img03.png': (4000, 7000, 1),
+    'img04.png': (4000, None, 1),
+    'img05.png': (3000, 4000, 1),
+    'img06.png': (7000, None, 2.4),
+    'img07.png': (1000, 3000, 1),
+    'img08.png': (2000, 2750, 1),
+    'img09.png': (2000, 6000, 1),
+    'img10.png': (3000, 3500, 1),
+    'img11.png': (5000, 11000, 2.4),
+    'img12.png': (800, 4000, 1)
+}
 
-    if bounding_boxes:
-        print('acaa')
-        for x1, y1, x2, y2, score in plate_detector.yield_coords(image, bounding_boxes):
-            print(f"Coordinates: ({x1}, {y1}, {x2}, {y2}), Score: {score:.2f}")
+# Procesar cada imagen según sus condiciones
+for image_name, conditions in image_conditions.items():
+    imagen_path = f'Patentes/Patentes/{image_name}'
+    process_image(imagen_path, *conditions)
 
-        # Descomenta las siguientes líneas si deseas mostrar las imágenes con las cajas delimitadoras
-        # result_image = plate_detector.draw_bboxes(image, bounding_boxes)
-        # cv2.imshow(f'Detected Plates - {imagen}', result_image)
-    else:
-        print(f"No license plate detected in the image: {imagen}")
-
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
-    
-    """
-"""
-carpeta_imagenes = 'Patentes/Patentes/'
-archivos_en_carpeta = os.listdir(carpeta_imagenes)
-extensiones_validas = ['.png', '.jpg', '.jpeg']
-ocr_detector = PatenteOCR()
-archivos_imagen = [archivo for archivo in archivos_en_carpeta if any(archivo.lower().endswith(ext) for ext in extensiones_validas)]
-for imagen in archivos_imagen:
-    plate_detector = DetectorPatente()
-    imagen_path = os.path.join(carpeta_imagenes, imagen)
-    frame = cv2.imread(imagen_path)
-
-    # Obtener las dimensiones de la imagen
-    height, width, _ = frame.shape
-    # Definir coordenadas que cubran toda la imagen
-    # En este caso, se usa (0, 0, width, height) para cubrir toda la imagen
-    iter_coords = [(0, 0, width, height, 0.8)]  # Coordenadas que cubren toda la imagen
-    # Realizar la predicción de la patente
-    patentes_detectadas = ocr_detector.predict(iter_coords, frame)
-    print(patentes_detectadas, imagen_path)
-    # Imprimir los valores de las patentes detectadas
-    for i, patente in enumerate(patentes_detectadas, 1):
-        cv2.imshow(patente, frame)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        print(f"Patente {i}: {patente}")
-
-"""

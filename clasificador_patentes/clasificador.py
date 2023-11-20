@@ -45,7 +45,8 @@ class DetectorPatente:
             epsilon = 0.02 * cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, epsilon, True)
 
-            if len(approx) == 4 and area > 2000 and area < 5000:  # Filtro de área y forma
+            if area:  # Filtro de área y forma
+                print(area)
                 rect = cv2.minAreaRect(contour)
                 box = cv2.boxPoints(rect)
                 box = np.int0(box)

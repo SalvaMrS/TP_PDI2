@@ -55,8 +55,9 @@ for subimg in subimagenes_zona_seleccionada:
     _, subimg_humbr = cv2.threshold(subimg_gray, 72,255, cv2.THRESH_BINARY)
 
     se = cv2.getStructuringElement(cv2.MORPH_RECT , (5,5))
-    binary_img = cv2.morphologyEx(subimg_humbr, cv2.MORPH_OPEN, se)
-    binary_img = cv2.morphologyEx(subimg_humbr, cv2.MORPH_OPEN, se)
+    # binary_img = cv2.morphologyEx(subimg_humbr, cv2.MORPH_OPEN, se)
+
+    binary_img = cv2.morphologyEx(subimg_humbr, cv2.MORPH_GRADIENT, se)
     retval, labels, stats, centroids = cv2.connectedComponentsWithStats(subimg_humbr)
 
     # Imprime la cantidad de componentes encontrados

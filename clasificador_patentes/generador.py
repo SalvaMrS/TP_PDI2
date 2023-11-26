@@ -5,7 +5,7 @@ import logging
 
 class GeneradorDeImagenes:
     def __init__(self, output_folder='/Procesadas'):
-        self.output_folder = output_folder
+        self.output_folder = 'Patentes/Procesadas/'
         self.logger = logging.getLogger(__name__)
 
         if not os.path.exists(self.output_folder):
@@ -18,7 +18,7 @@ class GeneradorDeImagenes:
             self.logger.info(f'Se ha guardado {filename}')
 
     def _generar_nombre_archivo(self, index):
-        return os.path.join(self.output_folder, f'subimg_{index}.jpg')
+        return os.path.join(self.output_folder, f'{index}.jpg')
 
     def _guardar_imagen(self, filename, imagen):
         cv2.imwrite(filename, imagen)

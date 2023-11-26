@@ -1,4 +1,5 @@
 import cv2
+import os
 import numpy as np
 
 
@@ -7,6 +8,24 @@ class SegmentadorDeImagenes:
         self.segment_width = segment_width
         self.segment_height = segment_height
 
+    def procesar_carpeta(self, carpeta):
+        # Obtener la lista de archivos en la carpeta
+        lista_archivos = os.listdir(carpeta)
+
+        # Iterar sobre cada archivo en la carpeta
+        for archivo in lista_archivos:
+            # Comprobar si el archivo es una imagen
+            if archivo.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+                # Construir la ruta completa del archivo
+                ruta_completa = os.path.join(carpeta, archivo)
+
+                # Leer la imagen
+                img = cv2.imread(ruta_completa)
+
+                # Verificar si la lectura de la imagen fue exitosa
+                if img is not None:
+                    # Llamar al método segmentar_y_guardar para procesar la imagen
+                    self.segmentar_y_guardar(img)
     @staticmethod
     def segmentar_y_guardar(subimg):
         subimg_gray = cv2.cvtColor(subimg, cv2.COLOR_BGR2GRAY)

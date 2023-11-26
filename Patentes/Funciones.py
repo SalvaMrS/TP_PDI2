@@ -38,7 +38,6 @@ def cargar_imagenes_generador(carpeta_imagenes: str) -> Generator[np.ndarray, No
         imagen = cv2.imread(ruta_completa)
         imagen = cv2.medianBlur(imagen, 1)
         imagen = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
-
         if imagen is not None:
             yield imagen
         else:

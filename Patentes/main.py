@@ -46,49 +46,32 @@ imagenes_sobel_clausura = transformar_imagenes(imagenes_sobel_erocion2, cv2.morp
 umbral = 200
 imagenes_sobel_filtrada = transformar_imagenes(imagenes_sobel_clausura, eliminar_objetos_pequenos, {'umbral_tamano_minimo': umbral})
 imagenes_sobel_mancha_mas_abajo = transformar_imagenes(imagenes_sobel_filtrada, mantener_objeto_mas_abajo)
-kernel_dilatacion = np.ones((20, 30), np.uint8)
+kernel_dilatacion = np.ones((15, 35), np.uint8)
 imagenes_sobel_umbralizado2 = transformar_imagenes(imagenes_sobel_mancha_mas_abajo, cv2.dilate, {'kernel':kernel_dilatacion})
 tuplas_imagenes = list(zip(imagenes, imagenes_sobel_umbralizado2))
 subimagenes_zona_seleccionada = transformar_imagenes(tuplas_imagenes, obtener_subimagen_zona_seleccionada)
 for subimg in subimagenes_zona_seleccionada:
-    gray = cv2.cvtColor(subimg, cv2.COLOR_BGR2GRAY)
-    _, saturated_image = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-    edges = cv2.Canny(gray, 100, 170, apertureSize=3)
+    subimg_gray = cv2.cvtColor(subimg, cv2.COLOR_BGR2GRAY)
+    _, subimg_humbr = cv2.threshold(subimg_gray, 72,255, cv2.THRESH_BINARY)
 
+    se = cv2.getStructuringElement(cv2.MORPH_RECT , (5,5))
+    binary_img = cv2.morphologyEx(subimg_humbr, cv2.MORPH_OPEN, se)
+    binary_img = cv2.morphologyEx(subimg_humbr, cv2.MORPH_OPEN, se)
+    retval, labels, stats, centroids = cv2.connectedComponentsWithStats(subimg_humbr)
 
-    lines = cv2.HoughLines(edges, rho=1, theta=np.pi / 180, threshold=50)
-
-    if lines is not None:
-        # Encontrar la línea dominante (la línea más larga)
-        longest_line = max(lines, key=lambda x: x[0][0] + x[0][1])
-        rho, theta = longest_line[0]
-        a = np.cos(theta)
-        b = np.sin(theta)
-        x0 = a * rho
-        y0 = b * rho
-        x1 = int(x0 + 1000 * (-b))
-        y1 = int(y0 + 1000 * (a))
-        x2 = int(x0 - 1000 * (-b))
-        y2 = int(y0 - 1000 * (a))
-
-        # Calcular el ángulo de la línea
-        angle = np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi
-
-        # Calcular la matriz de transformación para enderezar la imagen
-        rows, cols, _ = subimg.shape
-        rotation_matrix = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
-
-        # Aplicar la transformación de afinidad
-        rotated_image = cv2.warpAffine(subimg, rotation_matrix, (cols, rows))
-
-        # Mostrar la imagen enderezada
-        cv2.imshow('Imagen Enderezada', rotated_image)
+    # Imprime la cantidad de componentes encontrados
+    print("Número total de componentes conectados:", retval)
+    cv2.imshow('lll', subimg)
+    # Imprime las estadísticas de cada componente
+    for i in range(1, retval):  # Comienza desde 1 para omitir el componente de fondo (etiqueta 0)
+        obj = (labels == i).astype(np.uint8)*255
+        contours, _ = cv2.findContours(obj, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        obj_color = cv2.merge((obj,obj,obj))
+        cv2.drawContours(obj_color, contours, -1, (255,0,0), 1)
+        st = stats[i,:]
+        cv2.rectangle(obj_color, (st[0],st[1]),(st[0]+st[2], st[1]+st[3]), color=(0,0,255), thickness=1)
+        cv2.imshow('oo', obj_color)
         cv2.waitKey(0)
-
-    else:
-        print("No se detectaron líneas en la imagen.")
-
-# Cerrar la ventana después de mostrar todas las imágenes
 cv2.destroyAllWindows()
 
 

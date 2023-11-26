@@ -1,4 +1,4 @@
-from typing import List, Callable, Dict, Tuple
+from typing import List, Callable, Dict, Tuple, Generator
 import cv2
 import os
 import matplotlib.pyplot as plt
@@ -18,6 +18,33 @@ def debug():
             tipo_imagen = 'rgb' if valor_variable[0].shape[-1] == 3 else 'gris'
             print(f"Visualizando imágenes para la variable global: {nombre_variable}")
             mostrar_imagenes(valor_variable, tipo_imagen)
+
+
+
+
+def cargar_imagenes_generador(carpeta_imagenes: str) -> Generator[np.ndarray, None, None]:
+    """Generador que carga imágenes desde una carpeta dada.
+
+    Parameters:
+    - carpeta_imagenes (str): Ruta de la carpeta que contiene las imágenes.
+
+    Yields:
+    - np.ndarray: Imágenes cargadas como matrices NumPy.
+    """
+    archivos_imagenes = os.listdir(carpeta_imagenes)
+    for archivo in archivos_imagenes:
+        ruta_completa = os.path.join(carpeta_imagenes, archivo)
+
+        imagen = cv2.imread(ruta_completa)
+        imagen = cv2.medianBlur(imagen, 1)
+        imagen = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
+
+        if imagen is not None:
+            yield imagen
+        else:
+            print(f"No se pudo leer la imagen: {ruta_completa}")
+
+
 
 def cargar_imagenes(carpeta_imagenes: str) -> List[np.ndarray]:
     """Carga imágenes desde una carpeta dada.

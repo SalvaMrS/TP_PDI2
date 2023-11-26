@@ -60,6 +60,7 @@ for subimg in subimagenes_zona_seleccionada:
     binary_img = cv2.morphologyEx(subimg_humbr, cv2.MORPH_GRADIENT, se)
     retval, labels, stats, centroids = cv2.connectedComponentsWithStats(subimg_humbr)
 
+
     # Imprime la cantidad de componentes encontrados
     print("Número total de componentes conectados:", retval)
     cv2.imshow('lll', subimg)

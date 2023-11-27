@@ -170,6 +170,20 @@ def contador_monedas(contornos_monedas: list[np.ndarray]) -> float:
 
     return round(valor_total, 1)
 
+def contar_monedas_por_valor(contornos_monedas):
+    cantidades = {'10': 0, '50': 0, '1': 0}
+
+    for contorno_moneda in contornos_monedas:
+        valor = valor_moneda(contorno_moneda)
+        if valor == 0.1:
+            cantidades['10'] += 1
+        elif valor == 0.5:
+            cantidades['50'] += 1
+        elif valor == 1:
+            cantidades['1'] += 1
+
+    return cantidades
+
 def dibujar_moneda(imagen_original: np.ndarray, contorno_moneda: np.ndarray, color: tuple[int, int, int], valor_moneda: int) -> np.ndarray:
     """
     Dibuja el contorno de una moneda con su valor dentro en una copia de la imagen original.

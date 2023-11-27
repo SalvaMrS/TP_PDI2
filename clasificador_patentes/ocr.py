@@ -16,35 +16,6 @@ class PatenteOCR:
         self.confianza_avg = confianza_avg
         self.none_low_thresh = none_low_thresh
 
-    def procesar_carpeta(self, carpeta):
-        # Obtener la lista de archivos en la carpeta
-        lista_archivos = os.listdir(carpeta)
-
-        # Iterar sobre cada archivo en la carpeta
-        for archivo in lista_archivos:
-            # Comprobar si el archivo es una imagen
-            if archivo.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
-                # Construir la ruta completa del archivo
-                ruta_completa = os.path.join(carpeta, archivo)
-
-                # Leer la imagen
-                img = cv2.imread(ruta_completa)
-
-                # Verificar si la lectura de la imagen fue exitosa
-                if img is not None:
-                    # Llamar al método predict para procesar la imagen
-                    patentes = self.predict_from_image(img)
-
-                    # Hacer algo con las patentes detectadas, por ejemplo, imprimir en la consola
-                    print(f"Patentes en {archivo}: {patentes}")
-
-    def predict_from_image(self, frame: np.ndarray) -> list:
-        # Supongamos que tienes una forma de obtener las coordenadas de las placas (iter_coords)
-        iter_coords = obtener_coordenadas_de_placas(frame)
-
-        patentes = self.predict(iter_coords, frame)
-        return patentes
-
     def predict(self, iter_coords, frame: np.ndarray) -> list:
         patentes = []
         for yolo_prediction in iter_coords:

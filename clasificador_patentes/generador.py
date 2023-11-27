@@ -2,7 +2,6 @@ import cv2
 import os
 import logging
 
-
 class GeneradorDeImagenes:
     def __init__(self, output_folder='/Procesadas'):
         self.output_folder = 'Patentes/Procesadas/'

@@ -2,7 +2,6 @@ import cv2
 import os
 import numpy as np
 
-
 class SegmentadorDeImagenes:
     def __init__(self, segment_width=80, segment_height=100):
         self.segment_width = segment_width

@@ -35,7 +35,7 @@ kernel_dilatacion = np.ones((15, 35), np.uint8)
 imagenes_sobel_umbralizado2 = transformar_imagenes(imagenes_sobel_mancha_mas_abajo, cv2.dilate, {'kernel':kernel_dilatacion})
 tuplas_imagenes = list(zip(imagenes, imagenes_sobel_umbralizado2))
 subimagenes_zona_seleccionada = transformar_imagenes(tuplas_imagenes, obtener_subimagen_zona_seleccionada)
-
+debug(globals())
 generador = GeneradorDeImagenes()
 generador.guardar_subimagenes(subimagenes_zona_seleccionada)
 

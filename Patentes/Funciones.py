@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-def debug():
+def debug(variables_globales):
     """
     Visualiza las imágenes de las variables globales que sean listas de imágenes.
     Utiliza la función mostrar_imagenes con detección automática del tipo de imagen.
@@ -12,7 +12,8 @@ def debug():
     Returns:
     None
     """
-    variables_globales = globals()
+    # variables_globales = globals()
+    # fvariables_globales = globals()
     for nombre_variable, valor_variable in variables_globales.items():
         if isinstance(valor_variable, list) and valor_variable and isinstance(valor_variable[0], np.ndarray):
             tipo_imagen = 'rgb' if valor_variable[0].shape[-1] == 3 else 'gris'
